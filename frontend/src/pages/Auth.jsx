@@ -14,6 +14,7 @@ const Auth = () => {
   const [otp, setOtp] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -27,6 +28,7 @@ const Auth = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
     try {
       if (isLogin) {
@@ -41,11 +43,14 @@ const Auth = () => {
       }
     } catch (error) {
       toast.error(error.response?.data?.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleOTPSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const res = await API.post('/auth/verify-otp', { userId, otp });
       login(res.data.token, res.data.user);
@@ -54,6 +59,8 @@ const Auth = () => {
       toast.success('Registration successful!');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Invalid OTP');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,13 +75,25 @@ const Auth = () => {
 
   const googleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      setLoading(true);
       try {
-        const res = await API.post('/auth/google', { code: tokenResponse.code });
+        console.log('Google token response:', tokenResponse);
+        const res = await API.post('/auth/google', { 
+          code: tokenResponse.code 
+        });
         login(res.data.token, res.data.user);
+        toast.success('Logged in with Google!');
         navigate('/dashboard');
       } catch (error) {
-        toast.error('Google authentication failed');
+        console.error('Google auth error:', error);
+        toast.error(error.response?.data?.message || 'Google authentication failed');
+      } finally {
+        setLoading(false);
       }
+    },
+    onError: (error) => {
+      console.error('Google login error:', error);
+      toast.error('Google login failed. Please try again.');
     },
     flow: 'auth-code',
   });
@@ -86,7 +105,11 @@ const Auth = () => {
           <h2>{isLogin ? 'Welcome Back' : 'Join Pawfect Home'}</h2>
           <p>{isLogin ? 'Sign in to continue' : 'Create an account to get started'}</p>
 
-          <button className="btn-google" onClick={() => googleLogin()}>
+          <button 
+            className="btn-google" 
+            onClick={() => googleLogin()}
+            disabled={loading}
+          >
             <FaGoogle /> Continue with Google
           </button>
 
@@ -105,6 +128,7 @@ const Auth = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </div>
             )}
@@ -118,6 +142,7 @@ const Auth = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -131,18 +156,19 @@ const Auth = () => {
                 onChange={handleChange}
                 required
                 minLength={6}
+                disabled={loading}
               />
             </div>
 
-            <button type="submit" className="btn-submit">
-              {isLogin ? 'Sign In' : 'Sign Up'}
+            <button type="submit" className="btn-submit" disabled={loading}>
+              {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </button>
           </form>
 
           <div className="auth-footer">
             <p>
               {isLogin ? "Don't have an account? " : "Already have an account? "}
-              <button onClick={() => setIsLogin(!isLogin)}>
+              <button onClick={() => setIsLogin(!isLogin)} disabled={loading}>
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>
             </p>
@@ -164,12 +190,13 @@ const Auth = () => {
                 onChange={(e) => setOtp(e.target.value)}
                 maxLength={6}
                 required
+                disabled={loading}
               />
-              <button type="submit" className="btn-primary">
-                Verify OTP
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Verifying...' : 'Verify OTP'}
               </button>
             </form>
-            <button onClick={handleResendOTP} className="btn-link">
+            <button onClick={handleResendOTP} className="btn-link" disabled={loading}>
               Resend OTP
             </button>
           </div>

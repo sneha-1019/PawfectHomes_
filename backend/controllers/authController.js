@@ -204,6 +204,13 @@ export const googleAuth = async (req, res) => {
   try {
     const { code } = req.body;
 
+    if (!code) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Authorization code is required' 
+      });
+    }
+
     // Get tokens from Google
     const { tokens } = await oauth2Client.getToken(code);
     oauth2Client.setCredentials(tokens);
@@ -229,8 +236,10 @@ export const googleAuth = async (req, res) => {
         isAdmin: email === process.env.ADMIN_EMAIL
       });
 
-      // Send welcome email
-      await sendWelcomeEmail(email, name);
+      // Send welcome email (non-blocking)
+      sendWelcomeEmail(email, name).catch(err => 
+        console.error('Welcome email error:', err)
+      );
     } else {
       // Update user info if needed
       if (!user.googleId) {
@@ -241,6 +250,9 @@ export const googleAuth = async (req, res) => {
       }
       if (user.email === process.env.ADMIN_EMAIL) {
         user.isAdmin = true;
+      }
+      if (picture && user.avatar !== picture) {
+        user.avatar = picture;
       }
       await user.save();
     }
@@ -261,9 +273,14 @@ export const googleAuth = async (req, res) => {
     });
   } catch (error) {
     console.error('Google auth error:', error);
-    res.status(500).json({ success: false, message: 'Google authentication failed' });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Google authentication failed',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
+
 
 // @desc    Get current user
 // @route   GET /api/auth/me
