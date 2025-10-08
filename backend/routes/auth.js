@@ -5,7 +5,8 @@ import {
   resendOTP,
   login,
   googleAuth,
-  getMe
+  getMe,
+  logout
 } from '../controllers/authController.js';
 import { protect } from '../middleware/auth.js';
 
