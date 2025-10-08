@@ -282,6 +282,7 @@ export const googleAuth = async (req, res) => {
 };
 
 
+
 // @desc    Get current user
 // @route   GET /api/auth/me
 // @access  Private
@@ -303,5 +304,21 @@ export const getMe = async (req, res) => {
   } catch (error) {
     console.error('Get me error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Add /api/auth/logout endpoint
+export const logout = async (req, res) => {
+  try {
+    // In production, add token to blacklist
+    res.status(200).json({
+      success: true,
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Server error during logout'
+    });
   }
 };

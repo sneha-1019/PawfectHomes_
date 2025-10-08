@@ -16,6 +16,9 @@ router.post('/verify-otp', verifyOTP);
 router.post('/resend-otp', resendOTP);
 router.post('/login', login);
 router.post('/google', googleAuth);
+router.post('/logout', protect, logout);
+
 router.get('/me', protect, getMe);
+
 
 export default router;

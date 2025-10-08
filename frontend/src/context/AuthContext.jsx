@@ -1,6 +1,7 @@
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
 
@@ -14,55 +15,111 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  // Configure axios defaults
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      loadUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
-
-  const loadUser = async () => {
+  // Check if token is expired
+  const isTokenExpired = (token) => {
+    if (!token) return true;
     try {
-      const res = await axios.get('/api/auth/me');
-      setUser(res.data.user);
+      const decoded = jwtDecode(token);
+      const currentTime = Date.now() / 1000;
+      return decoded.exp < currentTime;
     } catch (error) {
-      console.error('Load user error:', error);
-      logout();
-    } finally {
-      setLoading(false);
+      console.error('Token decode error:', error);
+      return true;
     }
   };
 
-  const login = (token, userData) => {
-    localStorage.setItem('token', token);
-    setToken(token);
-    setUser(userData);
-    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    toast.success('Login successful!');
+  // Configure axios defaults and load user
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        const storedToken = localStorage.getItem('token');
+        
+        if (storedToken && !isTokenExpired(storedToken)) {
+          axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+          setToken(storedToken);
+          
+          try {
+            const res = await axios.get('/api/auth/me');
+            const userData = res.data.user;
+            setUser(userData);
+            setIsAdmin(userData?.isAdmin || false);
+            setIsAuthenticated(true);
+            console.log('User authenticated:', userData);
+          } catch (error) {
+            console.error('Load user error:', error);
+            logout();
+          }
+        } else {
+          if (storedToken) {
+            console.log('Token expired, logging out...');
+          }
+          logout();
+        }
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  // FIXED: Login function with proper state management
+  const login = async (newToken, userData) => {
+    try {
+      if (!newToken || !userData) {
+        throw new Error('Invalid login parameters');
+      }
+
+      if (isTokenExpired(newToken)) {
+        throw new Error('Received expired token');
+      }
+
+      localStorage.setItem('token', newToken);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
+
+      // Update ALL state variables synchronously
+      setToken(newToken);
+      setUser(userData);
+      setIsAdmin(userData?.isAdmin || false);
+      setIsAuthenticated(true);
+
+      console.log('Login successful, user:', userData.name);
+      toast.success('Login successful!');
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   };
 
+  // FIXED: Logout function clears everything
   const logout = () => {
     localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+
     setToken(null);
     setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
-    toast.success('Logged out successfully');
+    setIsAdmin(false);
+    setIsAuthenticated(false);
+
+    console.log('Logged out successfully');
   };
 
   const value = {
     user,
     token,
     loading,
+    isAuthenticated,
+    isAdmin,
     login,
-    logout,
-    isAuthenticated: !!user,
-    isAdmin: user?.isAdmin || false
+    logout
   };
 
   return (
@@ -71,3 +128,5 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+export default AuthContext;

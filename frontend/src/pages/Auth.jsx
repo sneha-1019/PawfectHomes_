@@ -73,30 +73,37 @@ const Auth = () => {
     }
   };
 
-  const googleLogin = useGoogleLogin({
-    onSuccess: async (tokenResponse) => {
-      setLoading(true);
-      try {
-        console.log('Google token response:', tokenResponse);
-        const res = await API.post('/auth/google', { 
-          code: tokenResponse.code 
-        });
-        login(res.data.token, res.data.user);
-        toast.success('Logged in with Google!');
-        navigate('/dashboard');
-      } catch (error) {
-        console.error('Google auth error:', error);
-        toast.error(error.response?.data?.message || 'Google authentication failed');
-      } finally {
-        setLoading(false);
-      }
-    },
-    onError: (error) => {
-      console.error('Google login error:', error);
-      toast.error('Google login failed. Please try again.');
-    },
-    flow: 'auth-code',
-  });
+ const googleLogin = useGoogleLogin({
+  onSuccess: async (tokenResponse) => {
+    setLoading(true);
+    try {
+      console.log('Google token response:', tokenResponse);
+      const res = await API.post('/auth/google', { 
+        code: tokenResponse.code 
+      });
+      
+      // CRITICAL FIX: Ensure login completes before navigation
+      await login(res.data.token, res.data.user);
+      
+      // Wait a bit for state to propagate
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      toast.success('Logged in with Google!');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Google auth error:', error);
+      toast.error(error.response?.data?.message || 'Google authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  },
+  onError: (error) => {
+    console.error('Google login error:', error);
+    toast.error('Google login failed. Please try again.');
+  },
+  flow: 'auth-code',
+});
+
 
   return (
     <div className="auth-page">
