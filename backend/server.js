@@ -1,15 +1,15 @@
-import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config();
+
+import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js';
 import authRoutes from './routes/auth.js';
 import petRoutes from './routes/pets.js';
 import adoptionRoutes from './routes/adoption.js';
 import adminRoutes from './routes/admin.js';
+import contactRoutes from './routes/contact.js';
 import fileUpload from 'express-fileupload';
-
-// Load environment variables
-dotenv.config();
 
 // Connect to MongoDB
 connectDB();
@@ -26,14 +26,15 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (mobile apps, Postman, etc.)
+    // Allow requests with no origin (e.g., mobile apps, Postman)
     if (!origin) return callback(null, true);
     
+    // **FIX: Properly block origins not in the whitelist**
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log('⚠️ Blocked by CORS:', origin);
-      callback(null, true); // Allow anyway for debugging
+      console.log('❌ Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS')); // This will block the request
     }
   },
   credentials: true,
@@ -49,6 +50,7 @@ app.use(cors(corsOptions));
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 app.use(fileUpload({
   useTempFiles: true,
   tempFileDir: '/tmp/',
@@ -88,6 +90,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/pets', petRoutes);
 app.use('/api/adoption', adoptionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/contact', contactRoutes); 
 
 // 404 handler for undefined routes
 app.use((req, res, next) => {
@@ -100,6 +103,15 @@ app.use((req, res, next) => {
 // Global error handling middleware
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message);
+  
+  // Handle CORS errors specifically
+  if (err.message === 'Not allowed by CORS') {
+    return res.status(403).json({
+      success: false,
+      message: 'You are not authorized to access this resource.'
+    });
+  }
+  
   console.error(err.stack);
   
   res.status(err.statusCode || 500).json({
@@ -113,7 +125,7 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'Not set'}`);
   console.log(`✅ CORS enabled for:`, allowedOrigins);
 });

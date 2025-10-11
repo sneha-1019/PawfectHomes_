@@ -9,7 +9,7 @@ import { sendAdoptionNotification } from '../utils/email.js';
 export const createAdoption = async (req, res) => {
   try {
     const { petId, applicationDetails, appointmentDate } = req.body;
-
+    
     // Check if pet exists and is available
     const pet = await Pet.findById(petId);
     if (!pet) {
@@ -42,7 +42,7 @@ export const createAdoption = async (req, res) => {
     // Update pet status to Pending
     pet.status = 'Pending';
     await pet.save();
-
+    
     res.status(201).json({
       success: true,
       message: 'Adoption application submitted successfully',
@@ -62,7 +62,7 @@ export const getMyApplications = async (req, res) => {
     const applications = await Adoption.find({ adopter: req.user.id })
       .populate('pet')
       .sort({ createdAt: -1 });
-
+      
     res.status(200).json({ success: true, applications });
   } catch (error) {
     console.error('Get applications error:', error);
@@ -78,7 +78,7 @@ export const getAdoptionById = async (req, res) => {
     const adoption = await Adoption.findById(req.params.id)
       .populate('pet')
       .populate('adopter', 'name email avatar');
-
+      
     if (!adoption) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
@@ -101,19 +101,20 @@ export const getAdoptionById = async (req, res) => {
 export const cancelAdoption = async (req, res) => {
   try {
     const adoption = await Adoption.findById(req.params.id);
-
     if (!adoption) {
       return res.status(404).json({ success: false, message: 'Application not found' });
     }
 
-    // Check if user is the adopter
-    if (adoption.adopter.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
+    // **FIX: Allow the adopter OR an admin to cancel the application**
+    if (adoption.adopter.toString() !== req.user.id && !req.user.isAdmin) {
+      return res.status(403).json({ success: false, message: 'Not authorized to cancel this application' });
     }
 
-    // Update pet status back to Available
-    await Pet.findByIdAndUpdate(adoption.pet, { status: 'Available' });
-
+    const pet = await Pet.findById(adoption.pet);
+    if (pet && pet.status === 'Pending') {
+        await Pet.findByIdAndUpdate(adoption.pet, { status: 'Available' });
+    }
+    
     await adoption.deleteOne();
 
     res.status(200).json({ success: true, message: 'Application cancelled successfully' });

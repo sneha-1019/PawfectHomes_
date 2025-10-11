@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import toast from 'react-hot-toast';
 import { FaEnvelope, FaPhone, FaMapMarkerAlt, FaPaperPlane } from 'react-icons/fa';
+import API from '../utils/api';
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -9,16 +10,24 @@ const Contact = () => {
     subject: '',
     message: ''
   });
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // In a real application, this would send the message to your backend
-    toast.success('Message sent successfully! We will get back to you soon.');
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    setLoading(true);
+    try {
+      const res = await API.post('/contact', formData);
+      toast.success(res.data.message);
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to send message.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -29,6 +38,7 @@ const Contact = () => {
       </div>
 
       <div className="contact-container">
+        {/* Contact Info */}
         <div className="contact-info">
           <h2>Get in Touch</h2>
           <p>
@@ -70,6 +80,7 @@ const Contact = () => {
           </div>
         </div>
 
+        {/* Contact Form */}
         <div className="contact-form-section">
           <h2>Send Us a Message</h2>
           <form onSubmit={handleSubmit} className="contact-form">
@@ -81,6 +92,7 @@ const Contact = () => {
                 value={formData.name}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -92,6 +104,7 @@ const Contact = () => {
                 value={formData.email}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -103,6 +116,7 @@ const Contact = () => {
                 value={formData.subject}
                 onChange={handleChange}
                 required
+                disabled={loading}
               />
             </div>
 
@@ -114,11 +128,12 @@ const Contact = () => {
                 onChange={handleChange}
                 rows="6"
                 required
+                disabled={loading}
               />
             </div>
 
-            <button type="submit" className="btn-submit">
-              <FaPaperPlane /> Send Message
+            <button type="submit" className="btn-submit" disabled={loading}>
+              <FaPaperPlane /> {loading ? 'Sending...' : 'Send Message'}
             </button>
           </form>
         </div>

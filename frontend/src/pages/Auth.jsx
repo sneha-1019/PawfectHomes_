@@ -127,7 +127,7 @@ const Auth = () => {
           <form onSubmit={handleSubmit}>
             {!isLogin && (
               <div className="form-group">
-                <FaUser className="input-icon" />
+                {/* <FaUser className="input-icon" /> */}
                 <input
                   type="text"
                   name="name"
@@ -141,7 +141,7 @@ const Auth = () => {
             )}
 
             <div className="form-group">
-              <FaEnvelope className="input-icon" />
+              {/* <FaEnvelope className="input-icon" /> */}
               <input
                 type="email"
                 name="email"
@@ -154,7 +154,7 @@ const Auth = () => {
             </div>
 
             <div className="form-group">
-              <FaLock className="input-icon" />
+              {/* <FaLock className="input-icon" /> */}
               <input
                 type="password"
                 name="password"

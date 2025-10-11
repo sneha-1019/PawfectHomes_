@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import API from '../utils/api';
-import PetCard from '../components/PetCard';
-import { FaHeart, FaUsers, FaHome, FaArrowRight } from 'react-icons/fa';
-import toast from 'react-hot-toast';
-import { useAuth } from '../context/AuthContext';
-import '../styles/home.css';
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import API from "../utils/api";
+import PetCard from "../components/PetCard";
+import { FaHeart, FaUsers, FaHome, FaArrowRight } from "react-icons/fa";
+import toast from "react-hot-toast";
+import { useAuth } from "../context/AuthContext";
+import "../styles/home.css";
 
 const Home = () => {
   const [featuredPets, setFeaturedPets] = useState([]);
@@ -18,10 +18,10 @@ const Home = () => {
 
   const fetchFeaturedPets = async () => {
     try {
-      const res = await API.get('/pets/featured');
+      const res = await API.get("/pets/featured");
       setFeaturedPets(res.data.pets);
     } catch (error) {
-      console.error('Error fetching featured pets:', error);
+      console.error("Error fetching featured pets:", error);
     } finally {
       setLoading(false);
     }
@@ -29,14 +29,15 @@ const Home = () => {
 
   const handleSavePet = async (petId) => {
     if (!isAuthenticated) {
-      toast.error('Please login to save pets');
+      toast.error("Please login to save pets");
       return;
     }
     try {
       const res = await API.post(`/pets/${petId}/save`);
       toast.success(res.data.message);
+      // Here you might want to trigger a user context refresh to update saved pets icon instantly
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Error saving pet');
+      toast.error(error.response?.data?.message || "Error saving pet");
     }
   };
 
@@ -49,7 +50,8 @@ const Home = () => {
             Find Your <span className="highlight">Pawfect</span> Companion
           </h1>
           <p className="hero-subtitle">
-            Every pet deserves a loving home. Start your adoption journey today and make a difference in a furry friend's life.
+            Every pet deserves a loving home. Start your adoption journey today
+            and make a difference in a furry friend's life.
           </p>
           <div className="hero-buttons">
             <Link to="/explore" className="btn-hero primary">
@@ -61,7 +63,10 @@ const Home = () => {
           </div>
         </div>
         <div className="hero-image">
-          <div className="hero-illustration">🐕🐈🐦</div>
+          {/* **FIX: Replaced the old SVG with a cleaner, more professional one** */}
+          <div className="hero-illustration">
+            <img src="/images/pet-hero.png" alt="Happy pets" />
+          </div>
         </div>
       </section>
 
@@ -90,17 +95,19 @@ const Home = () => {
           <h2>Featured Pets</h2>
           <p>Meet our adorable friends looking for their forever homes</p>
         </div>
-        
+
         {loading ? (
           <div className="loader">Loading...</div>
         ) : (
           <div className="pets-grid">
-            {featuredPets.map(pet => (
+            {featuredPets.map((pet) => (
               <PetCard
                 key={pet._id}
                 pet={pet}
                 onSave={isAuthenticated ? handleSavePet : null}
-                isSaved={user?.savedPets?.includes(pet._id)}
+                isSaved={user?.savedPets?.some(
+                  (savedPet) => savedPet === pet._id || savedPet._id === pet._id
+                )}
               />
             ))}
           </div>
@@ -145,24 +152,33 @@ const Home = () => {
         <h2>Happy Adoption Stories</h2>
         <div className="testimonials-grid">
           <div className="testimonial-card">
-            <p>"We found our perfect companion through Pawfect Home. The process was smooth and the staff was incredibly helpful!"</p>
+            <p>
+              "We found our perfect companion through Pawfect Home. The process
+              was smooth and the staff was incredibly helpful!"
+            </p>
             <div className="testimonial-author">
               <strong>Sarah Johnson</strong>
-              <span>⭐⭐⭐⭐⭐</span>
+              <span>★★★★★</span>
             </div>
           </div>
           <div className="testimonial-card">
-            <p>"Adopting Max was the best decision ever. Thank you Pawfect Home for bringing so much joy to our family!"</p>
+            <p>
+              "Adopting Max was the best decision ever. Thank you Pawfect Home
+              for bringing so much joy to our family!"
+            </p>
             <div className="testimonial-author">
               <strong>Michael Chen</strong>
-              <span>⭐⭐⭐⭐⭐</span>
+              <span>★★★★★</span>
             </div>
           </div>
           <div className="testimonial-card">
-            <p>"Amazing platform! Found my furry friend within a week. Highly recommend to anyone looking to adopt."</p>
+            <p>
+              "Amazing platform! Found my furry friend within a week. Highly
+              recommend to anyone looking to adopt."
+            </p>
             <div className="testimonial-author">
               <strong>Emily Rodriguez</strong>
-              <span>⭐⭐⭐⭐⭐</span>
+              <span>★★★★★</span>
             </div>
           </div>
         </div>
@@ -171,7 +187,10 @@ const Home = () => {
       {/* CTA Section */}
       <section className="cta-section">
         <h2>Ready to Find Your Perfect Pet?</h2>
-        <p>Join thousands of happy pet parents who found their companions through Pawfect Home</p>
+        <p>
+          Join thousands of happy pet parents who found their companions through
+          Pawfect Home
+        </p>
         <Link to="/explore" className="btn-cta">
           Start Your Journey <FaArrowRight />
         </Link>

@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -13,6 +13,18 @@ import Dashboard from './pages/Dashboard';
 import UploadPet from './pages/UploadPet';
 import ApplicationTracker from './pages/ApplicationTracker';
 import AdminDashboard from './pages/AdminDashboard';
+import { useAuth } from './context/AuthContext';
+
+const HomeOrAdmin = () => {
+  const { isAdmin, loading } = useAuth();
+
+  if (loading) {
+    return <div className="loader">Loading...</div>;
+  }
+
+  return isAdmin ? <Navigate to="/admin" replace /> : <Home />;
+};
+
 
 function App() {
   return (
@@ -20,7 +32,7 @@ function App() {
       <Navbar />
       <main className="main-content">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<HomeOrAdmin />} />
           <Route path="/explore" element={<ExplorePets />} />
           <Route path="/pet/:id" element={<PetDetails />} />
           <Route path="/about" element={<About />} />
@@ -29,26 +41,38 @@ function App() {
           <Route path="/auth" element={<Auth />} />
           
           {/* Protected Routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/upload-pet" element={
-            <ProtectedRoute>
-              <UploadPet />
-            </ProtectedRoute>
-          } />
-          <Route path="/applications" element={
-            <ProtectedRoute>
-              <ApplicationTracker />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin" element={
-            <ProtectedRoute adminOnly={true}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } />
+          <Route 
+            path="/dashboard" 
+            element={
+              <ProtectedRoute>
+                <Dashboard />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/upload-pet" 
+            element={
+              <ProtectedRoute>
+                <UploadPet />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/applications" 
+            element={
+              <ProtectedRoute>
+                <ApplicationTracker />
+              </ProtectedRoute>
+            } 
+          />
+          <Route 
+            path="/admin" 
+            element={
+              <ProtectedRoute adminOnly={true}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } 
+          />
         </Routes>
       </main>
       <Footer />

@@ -597,3 +597,90 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* [ All previous admin.css styles ] */
+
+/* Pagination Styles */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  padding: 10px;
+}
+
+.pagination-container button {
+  padding: 8px 16px;
+  border: 2px solid #e0e0e0;
+  background: white;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.pagination-container button:hover:not(:disabled) {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background: #fff5f5;
+}
+
+.pagination-container button.active {
+  background: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.pagination-container button:disabled {
+  color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 968px) {
+  .admin-dashboard {
+    padding: 20px;
+  }
+  
+  .admin-stats {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  
+  .adoptions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .adoption-header {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  
+  .adoption-header img {
+    margin: 0 auto;
+  }
+  
+  .about-page,
+  .contact-page,
+  .faq-page {
+    padding: 0 20px 60px;
+  }
+  
+  .mission-section,
+  .story-section,
+  .contact-info,
+  .contact-form-section {
+    padding: 30px 20px;
+  }
+  
+  .contact-container {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  
+  .values-grid,
+  .team-grid,
+  .impact-stats {
+    grid-template-columns: 1fr;
+  }
+}

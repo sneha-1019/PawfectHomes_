@@ -1,4 +1,9 @@
 import nodemailer from 'nodemailer';
+import dotenv from "dotenv";
+dotenv.config();
+
+console.log("SendGrid key present:", !!process.env.SENDGRID_API_KEY);
+
 
 // Create transporter using SendGrid SMTP or Gmail
 const transporter = nodemailer.createTransport({
@@ -88,6 +93,8 @@ export const sendAdoptionNotification = async (email, petName, status) => {
     await transporter.sendMail(mailOptions);
   } catch (error) {
     console.error('Error sending notification email:', error);
+    // FIX: Added throw new Error to prevent silent failures
+    throw new Error('Notification email could not be sent');
   }
 };
 
@@ -130,5 +137,62 @@ export const sendWelcomeEmail = async (email, name) => {
     await transporter.sendMail(mailOptions);
   } catch (error) {
     console.error('Error sending welcome email:', error);
+    // FIX: Added throw new Error to prevent silent failures
+    throw new Error('Welcome email could not be sent');
+  }
+};
+
+// Send contact form message to admin
+export const sendContactFormEmail = async (name, fromEmail, subject, message) => {
+  const mailOptions = {
+    from: `${process.env.FROM_NAME} <${process.env.FROM_EMAIL}>`,
+    to: process.env.ADMIN_EMAIL || process.env.FROM_EMAIL, 
+    replyTo: fromEmail, 
+    subject: `New Contact Form Message: ${subject}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+          .container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; }
+          .header { color: #ff6b6b; margin-bottom: 20px; }
+          .content-block { background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+          .content-block p { margin: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <h1 class="header">📬 New Message from Pawfect Home Contact Form</h1>
+          <p>You have received a new message from a site visitor.</p>
+          
+          <div class="content-block">
+            <strong>From:</strong>
+            <p>${name} (${fromEmail})</p>
+          </div>
+          
+          <div class="content-block">
+            <strong>Subject:</strong>
+            <p>${subject}</p>
+          </div>
+
+          <div class="content-block">
+            <strong>Message:</strong>
+            <p>${message.replace(/\n/g, '<br>')}</p>
+          </div>
+          
+          <p>You can reply directly to this email to respond to the user.</p>
+        </div>
+      </body>
+      </html>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log('✅ Contact form email sent successfully');
+  } catch (error) {
+    console.error('❌ Error sending contact form email:', error);
+    throw new Error('Email could not be sent');
   }
 };

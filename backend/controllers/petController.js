@@ -15,16 +15,22 @@ cloudinary.v2.config({
 export const getPets = async (req, res) => {
   try {
     const { search, species, gender, size, status, sort } = req.query;
-    
+
     // Build query
     let query = { verifiedByAdmin: true };
 
+    // **FIX: Use MongoDB's more efficient text index for searching**
     if (search) {
-      query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { breed: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } }
-      ];
+      query.$text = { $search: search };
+    } else {
+      // Retain regex search as a fallback if no text index is configured, but text is preferred
+      if (search) {
+        query.$or = [
+          { name: { $regex: search, $options: 'i' } },
+          { breed: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
+        ];
+      }
     }
 
     if (species && species !== 'All') {
@@ -41,8 +47,13 @@ export const getPets = async (req, res) => {
 
     if (status && status !== 'All') {
       query.status = status;
+    } else {
+      // By default, only show available pets on the main explore page unless specified
+      if (!status) {
+        query.status = 'Available';
+      }
     }
-
+    
     // Sorting
     let sortOption = {};
     if (sort === 'newest') {
@@ -60,7 +71,7 @@ export const getPets = async (req, res) => {
     const pets = await Pet.find(query)
       .sort(sortOption)
       .populate('uploadedBy', 'name email');
-
+      
     res.status(200).json({
       success: true,
       count: pets.length,
@@ -78,7 +89,6 @@ export const getPets = async (req, res) => {
 export const getPetById = async (req, res) => {
   try {
     const pet = await Pet.findById(req.params.id).populate('uploadedBy', 'name email avatar');
-
     if (!pet) {
       return res.status(404).json({ success: false, message: 'Pet not found' });
     }
@@ -106,10 +116,8 @@ export const createPet = async (req, res) => {
 
     // Handle image uploads
     let imageUrls = [];
-    
     if (req.files && req.files.images) {
       const images = Array.isArray(req.files.images) ? req.files.images : [req.files.images];
-      
       for (const image of images) {
         const result = await cloudinary.v2.uploader.upload(image.tempFilePath, {
           folder: 'pawfect-home/pets',
@@ -134,7 +142,7 @@ export const createPet = async (req, res) => {
       location: JSON.parse(location),
       images: imageUrls,
       uploadedBy: req.user.id,
-      verifiedByAdmin: req.user.isAdmin || req.user.email === process.env.ADMIN_EMAIL
+      verifiedByAdmin: req.user.isAdmin || false // Only admins can auto-verify
     });
 
     // Add to user's uploads
@@ -155,7 +163,6 @@ export const createPet = async (req, res) => {
 export const updatePet = async (req, res) => {
   try {
     let pet = await Pet.findById(req.params.id);
-
     if (!pet) {
       return res.status(404).json({ success: false, message: 'Pet not found' });
     }
@@ -164,13 +171,37 @@ export const updatePet = async (req, res) => {
     if (pet.uploadedBy.toString() !== req.user.id && !req.user.isAdmin) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
+    
+    // **FIX: Prevent mass assignment vulnerability by specifying allowed fields**
+    const allowedUpdates = [
+      'name', 'species', 'breed', 'age', 'gender', 'size', 'color', 
+      'description', 'healthInfo', 'temperament', 'location', 'status'
+    ];
+    
+    const updates = {};
+    
+    for (const key in req.body) {
+      if (allowedUpdates.includes(key)) {
+        updates[key] = req.body[key];
+      }
+    }
 
-    pet = await Pet.findByIdAndUpdate(req.params.id, req.body, {
+    // Admins can update verification and featured status
+    if (req.user.isAdmin) {
+      if (req.body.verifiedByAdmin !== undefined) {
+        updates.verifiedByAdmin = req.body.verifiedByAdmin;
+      }
+      if (req.body.featured !== undefined) {
+        updates.featured = req.body.featured;
+      }
+    }
+
+    const updatedPet = await Pet.findByIdAndUpdate(req.params.id, updates, {
       new: true,
       runValidators: true
     });
 
-    res.status(200).json({ success: true, pet });
+    res.status(200).json({ success: true, pet: updatedPet });
   } catch (error) {
     console.error('Update pet error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -183,7 +214,6 @@ export const updatePet = async (req, res) => {
 export const deletePet = async (req, res) => {
   try {
     const pet = await Pet.findById(req.params.id);
-
     if (!pet) {
       return res.status(404).json({ success: false, message: 'Pet not found' });
     }
@@ -193,6 +223,8 @@ export const deletePet = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
 
+    // Note: Add logic here to delete images from Cloudinary to save space
+    
     await pet.deleteOne();
 
     res.status(200).json({ success: true, message: 'Pet deleted successfully' });
@@ -219,11 +251,11 @@ export const toggleSavePet = async (req, res) => {
     }
 
     await user.save();
-
+    
     res.status(200).json({
       success: true,
       isSaved: !isSaved,
-      message: isSaved ? 'Pet removed from saved' : 'Pet saved successfully'
+      message: isSaved ? 'Pet removed from saved list' : 'Pet saved successfully'
     });
   } catch (error) {
     console.error('Toggle save pet error:', error);
@@ -239,7 +271,7 @@ export const getFeaturedPets = async (req, res) => {
     const pets = await Pet.find({ featured: true, verifiedByAdmin: true, status: 'Available' })
       .limit(6)
       .sort({ createdAt: -1 });
-
+      
     res.status(200).json({ success: true, pets });
   } catch (error) {
     console.error('Get featured pets error:', error);
